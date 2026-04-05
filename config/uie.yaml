@@ -1,0 +1,37 @@
+exp_name: uie
+
+train:
+  warmup: False
+  warmup_epoch: 0
+  lr_warmup: 1e-6
+
+  train_inp:  datasets/uie/uieb/train/input
+  train_gt:   datasets/uie/uieb/train/reference
+
+  valid_inp:  datasets/uie/uieb/test/input
+  valid_gt:   datasets/uie/uieb/test/reference
+
+  batch_size: 4
+  epoch: 1000
+  lr: 1e-3
+  num_workers: 0
+  save_every: 200
+  save_slim: true
+  seed: 3407
+
+test:
+  test_inp:   datasets/uie/uieb/test/input
+  test_gt:    datasets/uie/uieb/test/reference
+  num_workers: 0
+  save: false
+
+demo:
+  demo_inp:   datasets/uie/uieb/test/input
+  num_workers: 0
+
+model:
+  type: re-parameterized # [original, re-parameterized]
+  pretrained: experiments/2025-12-29 01-47-00 train_uie/models/model_best_slim.pkl
+  need_slim: true # [true, false]
+  rep_scale: 4
+  channels: 12
