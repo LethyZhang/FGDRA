@@ -48,7 +48,7 @@ def downsample_to_target_avgpool(F: torch.Tensor, target: int = 32) -> torch.Ten
 
 class FGDRAUIENet(nn.Module):
     """
-    Training network (MBRConv + FST) with FDRA attention.
+    Training network (MBRConv + FST) with fgdra attention.
     - FFT guidance computed on deterministic 32x32 downsample (avg_pool2d-based).
     - Frequency guidance ONLY used to generate attention.
     - Slim supported.
@@ -76,12 +76,12 @@ class FGDRAUIENet(nn.Module):
         )
 
         # ----------------------------
-        # FDRA components (train)
+        # fgdra components (train)
         # ----------------------------
         # channel attention: input 2C (GAP(F) + GAP(LF))
-        self.fdra_fca = MBRConv1(2 * channels, channels, rep_scale=rep_scale)
+        self.fgdra_fca = MBRConv1(2 * channels, channels, rep_scale=rep_scale)
         # spatial attention: input 3 (max(F), avg(F), HF_map)
-        self.fdra_fgsa = MBRConv1(2, channels, rep_scale=rep_scale)
+        self.fgdra_fgsa = MBRConv1(2, channels, rep_scale=rep_scale)
 
         # gate params (static, no dynamic route)
         self.alpha = nn.Parameter(torch.ones(1))
@@ -93,9 +93,9 @@ class FGDRAUIENet(nn.Module):
         self.tail_warm = MBRConv3(channels, 3, rep_scale=rep_scale)
         self.drop = DropBlock(3)
 
-    def _fdra_attention(self, F: torch.Tensor) -> torch.Tensor:
+    def _fgdra_attention(self, F: torch.Tensor) -> torch.Tensor:
         """
-        FDRA attention generation using low-res FFT guidance.
+        fgdra attention generation using low-res FFT guidance.
         Return A: (B,C,H,W)
         """
         B, C, H, W = F.shape
@@ -116,9 +116,9 @@ class FGDRAUIENet(nn.Module):
         avg_map = torch.mean(F, dim=1, keepdim=True)    # (B,1,H,W)
 
 
-        fdra_spatial_in = torch.cat([max_map, avg_map], dim=1)
+        fgdra_spatial_in = torch.cat([max_map, avg_map], dim=1)
 
-        A_s = torch.sigmoid(self.fdra_fgsa(fdra_spatial_in))                # (B,C,H,W)
+        A_s = torch.sigmoid(self.fgdra_fgsa(fgdra_spatial_in))                # (B,C,H,W)
 
         # 4) Channel attention: GAP(F) + GAP(M)
         gap_F = torch.mean(F, dim=(2, 3), keepdim=True)  # (B,C,1,1)
@@ -127,9 +127,9 @@ class FGDRAUIENet(nn.Module):
         gap_M = torch.mean(M, dim=(2, 3), keepdim=True)
         gap_M = gap_M / (gap_M.mean(dim=1, keepdim=True) + 1e-6)
 
-        fdra_channel_in = torch.cat([gap_F, gap_M], dim=1)  # (B,2C,1,1)
+        fgdra_channel_in = torch.cat([gap_F, gap_M], dim=1)  # (B,2C,1,1)
         # (B,2C,1,1)
-        A_c = torch.sigmoid(self.fdra_fca(fdra_channel_in))                 # (B,C,1,1)
+        A_c = torch.sigmoid(self.fgdra_fca(fgdra_channel_in))                 # (B,C,1,1)
 
         # 5) static gated fusion (no dynamic route)
         Ag, Al = A_c, A_s
@@ -145,7 +145,7 @@ class FGDRAUIENet(nn.Module):
         x0 = self.head(x)
         F = self.body(x0)                       # (B,C,H,W)
 
-        A = self._fdra_attention(F)             # (B,C,H,W)
+        A = self._fgdra_attention(F)             # (B,C,H,W)
         F_hat = A * F
 
         return self.tail(F_hat)
@@ -158,7 +158,7 @@ class FGDRAUIENet(nn.Module):
 
     def slim(self):
         """
-        Re-parameterize to FGDRAUIENetS (FDRA inference).
+        Re-parameterize to FGDRAUIENetS (fgdra inference).
         - MBRConv1/3/5 -> Conv2d
         - FST params copy
         - alpha/beta/lam copy (top-level)
@@ -202,8 +202,8 @@ class FGDRAUIENet(nn.Module):
 
 class FGDRAUIENetS(nn.Module):
     """
-    Inference network (Conv + FSTS) with the SAME FDRA attention logic.
-    Must match FGDRAUIENet._fdra_attention exactly (except conv implementations).
+    Inference network (Conv + FSTS) with the SAME fgdra attention logic.
+    Must match FGDRAUIENet._fgdra_attention exactly (except conv implementations).
     """
     def __init__(self, channels, fft_size=32):
         super(FGDRAUIENetS, self).__init__()
@@ -224,9 +224,9 @@ class FGDRAUIENetS(nn.Module):
             channels
         )
 
-        # FDRA convs (slim target)
-        self.fdra_fca = nn.Conv2d(2 * channels, channels, 1, 1)
-        self.fdra_fgsa = nn.Conv2d(2, channels, 1, 1)
+        # fgdra convs (slim target)
+        self.fgdra_fca = nn.Conv2d(2 * channels, channels, 1, 1)
+        self.fgdra_fgsa = nn.Conv2d(2, channels, 1, 1)
 
         # gate params (loaded from slim)
         self.alpha = nn.Parameter(torch.ones(1))
@@ -235,7 +235,7 @@ class FGDRAUIENetS(nn.Module):
 
         self.tail = nn.Conv2d(channels, 3, 3, 1, 1)
 
-    def _fdra_attention(self, F: torch.Tensor) -> torch.Tensor:
+    def _fgdra_attention(self, F: torch.Tensor) -> torch.Tensor:
         B, C, H, W = F.shape
 
 
@@ -252,9 +252,9 @@ class FGDRAUIENetS(nn.Module):
         max_map, _ = torch.max(F, dim=1, keepdim=True)
         avg_map = torch.mean(F, dim=1, keepdim=True)
 
-        fdra_spatial_in = torch.cat([max_map, avg_map], dim=1)
+        fgdra_spatial_in = torch.cat([max_map, avg_map], dim=1)
 
-        A_s = torch.sigmoid(self.fdra_fgsa(fdra_spatial_in))
+        A_s = torch.sigmoid(self.fgdra_fgsa(fgdra_spatial_in))
 
 
         gap_F = torch.mean(F, dim=(2, 3), keepdim=True)
@@ -262,9 +262,9 @@ class FGDRAUIENetS(nn.Module):
         gap_M = torch.mean(M, dim=(2, 3), keepdim=True)
         gap_M = gap_M / (gap_M.mean(dim=1, keepdim=True) + 1e-6)
 
-        fdra_channel_in = torch.cat([gap_F, gap_M], dim=1)
+        fgdra_channel_in = torch.cat([gap_F, gap_M], dim=1)
 
-        A_c = torch.sigmoid(self.fdra_fca(fdra_channel_in))
+        A_c = torch.sigmoid(self.fgdra_fca(fgdra_channel_in))
 
 
         Ag, Al = A_c, A_s
@@ -280,7 +280,7 @@ class FGDRAUIENetS(nn.Module):
         x0 = self.head(x)
         F = self.body(x0)
 
-        A = self._fdra_attention(F)
+        A = self._fgdra_attention(F)
         F_hat = A * F
 
         return self.tail(F_hat)

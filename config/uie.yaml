@@ -30,8 +30,8 @@ demo:
   num_workers: 0
 
 model:
-  type: re-parameterized # [original, re-parameterized]
-  pretrained: experiments/2025-12-29 01-47-00 train_uie/models/model_best_slim.pkl
-  need_slim: true # [true, false]
+  type: original # [original, re-parameterized]
+  pretrained: false
+  need_slim: false # [true, false]
   rep_scale: 4
   channels: 12
