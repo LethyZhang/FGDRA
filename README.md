@@ -89,7 +89,7 @@ experiments/pretrain/
 
 | Method | Params | FPS   | PSNR | SSIM |
 |--------|--------|--------|------|------|
-| Ours   | 4.23K | 600+  | —    | —    |
+| Ours   | 4.23K | 600+  | 23.97 | 0.9155 |
 
 ---
 
