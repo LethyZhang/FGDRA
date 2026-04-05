@@ -126,14 +126,6 @@ If you find this work useful, please cite:
 
 ---
 
-## 🙏 Acknowledgement
-
-This project is partially built upon:
-
-https://github.com/LukasYan30/MobileIE
-
----
-
 ## 👥 Authors
 
 - Leshen Zhang  
@@ -149,3 +141,11 @@ https://github.com/LukasYan30/MobileIE
 
 - lethyzhang@163.com  
 - lethyacademic@gmail.com
+
+  ---
+
+## 🙏 Acknowledgement
+
+This project is partially built upon:
+
+https://github.com/LukasYan30/MobileIE
