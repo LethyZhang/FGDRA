@@ -93,6 +93,16 @@ experiments/pretrain/
 
 ---
 
+## 🔥 Qualitative Results
+
+Qualitative comparison of underwater image enhancement results on the UIEB dataset with ground-truth references.
+
+<p align="center">
+  <img src="qualitative_results.png" width="100%">
+</p>
+
+---
+
 ## 📂 Project Structure
 
 ```
