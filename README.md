@@ -1,4 +1,4 @@
-# Real-Time Underwater Image Enhancement via Frequency-Guided Dual-Path Attention (FGDRA)
+# Real-Time Underwater Image Enhancement via Frequency-Guided Dual-Path Attention (FGDPA)
 
 > Accepted by ICME 2026
 
